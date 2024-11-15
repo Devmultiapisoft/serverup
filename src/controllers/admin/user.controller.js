@@ -1,7 +1,7 @@
 'use strict';
 const logger = require('../../services/logger');
 const log = new logger('AdminUsersController').getChildLogger();
-const { userDbHandler, verificationDbHandler, messageDbHandler } = require('../../services/db');
+const { userDbHandler, verificationDbHandler, messageDbHandler, socialLinksDbHandler } = require('../../services/db');
 const { getChildLevelsByRefer } = require('../../services/commonFun');
 const bcrypt = require('bcryptjs');
 const responseHelper = require('../../utils/customResponse');
@@ -89,6 +89,34 @@ module.exports = {
             responseData.msg = 'Failed to fetch data';
             return responseHelper.error(res, responseData);
         }
+    },
+    get_daily_task_data: async (req, res) => {
+        let reqObj = req.query;
+        log.info('Recieved request for getAll Users:', reqObj);
+        console.log("aya")
+        let responseData = {};
+        try {
+
+            let getList;
+            if (reqObj?.limit == -1) {
+                getList = await socialLinksDbHandler.getByQuery({'user_id':1}, { 'user_id': 1, 'url': 1});
+                console.log(getList)
+            }
+            else {
+                getList = await socialLinksDbHandler.getAll(reqObj);
+                console.log(getList)
+
+            }
+
+            responseData.msg = 'Data fetched successfully!';
+            responseData.data = getList;
+            return responseHelper.success(res, responseData);
+        } catch (error) {
+            log.error('failed to get all users data with error::', error);
+            responseData.msg = 'Failed to get Data';
+            return responseHelper.error(res, responseData);
+        }
+
     },
 
     getDownline: async (req, res) => {

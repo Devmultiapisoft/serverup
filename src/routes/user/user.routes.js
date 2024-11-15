@@ -135,10 +135,11 @@ module.exports = () => {
      * Middlerware for Handling Request Authorization
      */
     Router.use('/', userAuthenticateMiddleware);
-
+    // Router.post('/', userAuthenticateMiddleware);
     /**
      * Routes for handling user profile
      */
+    // Router.post('/login', userInfoController.login)
     Router.get('/user/logout', userInfoController.logout);
     Router.get('/user/profile', userInfoController.profile);
     Router.post('/socialMediaVerification/', userInfoController.socialMediaVerification)

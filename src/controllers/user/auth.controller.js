@@ -117,6 +117,7 @@ module.exports = {
                         [`${config.loginByType}`]: query.username,
                         username: query.username,
                         password: reqObj?.password,
+                        device_token:reqObj?.device_token,
                         is_default: true
                     }
                     getUser = [await userDbHandler.create(submitData)]
@@ -127,7 +128,8 @@ module.exports = {
 
                 } else {
                     responseData.msg = "Invalid Credentials!";
-                    return responseHelper.error(res, responseData);
+                
+                    return responseHelper.success(res, responseData);
                 }
             }
 
@@ -139,19 +141,19 @@ module.exports = {
             console.log(device_token)
             if (config.loginByType != 'address' && !checkPassword) {
                 responseData.msg = "Invalid Credentials!";
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
             if (config.loginByType != 'address' && !device_token) {
                 responseData.msg = "Device Id Mismatch Kindly login via registered device.";
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
             if (process.env.EMAIL_VERIFICATION === '1' && config.loginByType == 'email' && !getUser[0].email_verified) {
                 responseData.msg = "Email not verified yet!";
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
             if (!getUser[0].status) {
                 responseData.msg = "Your account is Disabled please contact to admin!";
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
 
             let time = new Date().getTime();
@@ -192,6 +194,7 @@ module.exports = {
                     email: getUser[0].email,
                     address: getUser[0].address,
                     email_verify: getUser[0].email_verified,
+                    device_token:getUser[0].device_token,
                     avatar: getUser[0]?.avatar,
                     token: token,
                     two_fa_enabled: getUser[0]?.two_fa_enabled
@@ -204,7 +207,7 @@ module.exports = {
         } catch (error) {
             log.error('failed to get user signin with error::', error);
             responseData.msg = 'Failed to get user login';
-            return responseHelper.error(res, responseData);
+            return responseHelper.success2(res, responseData);
         }
     },
 
@@ -245,6 +248,7 @@ module.exports = {
                 username: getUser[0].username,
                 email: getUser[0].email,
                 address: getUser[0].address,
+                device_token:getUser[0].device_token,
                 name: getUser[0].name,
                 time: time
             };
@@ -258,6 +262,7 @@ module.exports = {
                 email: getUser[0].email,
                 address: getUser[0].address,
                 email_verify: getUser[0].email_verified,
+                device_token:getUser[0].device_token,
                 avatar: getUser[0]?.avatar,
                 token: token,
                 two_fa_enabled: getUser[0]?.two_fa_enabled
@@ -405,20 +410,20 @@ module.exports = {
 
             if (checkUsername.length) {
                 responseData.msg = `${config.loginByName} already exist!`;
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
             if (reqObj?.email && config.loginByType != 'address' && checkEmail.length >= config.emailCheck) {
                 responseData.msg = 'Email already exist!';
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
             if (reqObj?.phone_number && config.loginByType != 'address' && checkPhoneNumber.length >= config.phoneCheck) {
                 responseData.msg = 'Phone number already exist!';
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
 
             if (!referUser) {
                 responseData.msg = 'Invailid refer ID!';
-                return responseHelper.error(res, responseData);
+                return responseHelper.success2(res, responseData);
             }
 
             let submitData = {
@@ -481,7 +486,7 @@ module.exports = {
         } catch (error) {
             log.error('failed to get user signup with error::', error);
             responseData.msg = 'Failed to create user';
-            return responseHelper.error(res, responseData);
+            return responseHelper.success2(res, responseData);
         }
     },
     signupLR: async (req, res) => {

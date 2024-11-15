@@ -22,7 +22,8 @@ const {
     adminInvestmentPlanController,
     adminMessageController,
     adminSettingController,
-    adminWithdrawalController
+    adminWithdrawalController,
+    userController
 } = require("../../controllers");
 
 /**
@@ -84,6 +85,7 @@ module.exports = () => {
     Router.get("/reset-setup-db", adminController.reset_db)
     Router.post("/user-login-request", validationMiddleware(adminValidation.user_login_request, 'body'), adminController.user_login_request)
     Router.get("/get-all-users-data", adminController.get_all_users_data)
+    
     Router.put("/update-user-profile", [multerService.uploadFile('avatar').single('user_avatar'), validationMiddleware(adminInfoValidation.updateUserProfile, "body")], adminInfoController.updateUserProfile);
     Router.put("/update-general-settings",validationMiddleware(settingValidation.addUpdate, "body"), adminSettingController.add_update);
 
@@ -99,6 +101,7 @@ module.exports = () => {
     Router.put("/update-admin", validationMiddleware(adminValidation.update, 'body'), adminController.update);
 
     Router.get("/get-all-users", adminUserController.getAll);
+    Router.get("/get-daily-task-data", adminUserController.get_daily_task_data);
     Router.get("/get-user/:id", adminUserController.getOne);
     Router.get("/get-user-count", adminUserController.getCount);
     Router.get("/get-user-downline", adminUserController.getDownline);

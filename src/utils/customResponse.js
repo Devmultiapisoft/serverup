@@ -13,6 +13,13 @@ module.exports = {
 			result: body.data
 		});
 	},
+	success2: (res, body = { msg: 'Action completed successfully', data: {} }) => {
+		return res.status(200).send({
+			status: false,
+			message: body.msg,
+			result: body.data
+		});
+	},
 	/**
 	* Helper Method to handle API error Response
 	*/
