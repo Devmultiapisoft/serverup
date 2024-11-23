@@ -1,7 +1,7 @@
 'use strict';
 const logger = require('../../services/logger');
 const log = new logger('AdminController').getChildLogger();
-const { adminDbHandler, userLoginRequestDbHandler, userDbHandler, incomeDbHandler } = require('../../services/db');
+const { adminDbHandler, userLoginRequestDbHandler, userDbHandler, incomeDbHandler, settingDbHandler } = require('../../services/db');
 const bcrypt = require('bcryptjs');
 const jwtService = require('../../services/jwt');
 const responseHelper = require('../../utils/customResponse');
@@ -13,6 +13,7 @@ const { setup } = require('./setup.controller');
 const { userModel, incomeModel } = require('../../models');
 
 const { parse } = require('json2csv');
+const { levelIncome } = require('../user/cron.controller');
 
 /*******************
  * PRIVATE FUNCTIONS
@@ -39,7 +40,13 @@ let _createHashPassword = async (password) => {
     let hashedPassword = await bcrypt.hash(password, saltpass);
     return hashedPassword;
 }
+let acceptedMedias = ["x.com", "linkedin.com", "facebook.com", "first_youtube", "second_youtube", "third_youtube", "share_first_youtube", "share_second_youtube", "share_third_youtube", "instagram.com"]
 
+function checkMediaExistence(input) {
+    const lowercasedInput = input.toLowerCase()
+    const existingMedia = acceptedMedias.filter(media => lowercasedInput.includes(media));
+    return existingMedia || null
+}
 /**************************
  * END OF PRIVATE FUNCTIONS
  **************************/
@@ -230,7 +237,124 @@ module.exports = {
             return responseHelper.error(res, responseData);
         }
     },
+     approveSocial: async (req, res) => {
+        let responseData = {};
+        let acceptedMedias = ["xUrl", "linkedinUrl", "facebookUrl", "instagramUrl"]
 
+    
+        try {
+            const { user_id } = req.body; // Extract user_id and acceptedMedias from the request
+    
+            if (!user_id) {
+                throw new Error("User ID is required.");
+            }
+    
+            if (!Array.isArray(acceptedMedias) || acceptedMedias.length === 0) {
+                throw new Error("Invalid or empty acceptedMedias array.");
+            }
+    
+            // Get the last accepted media type from the array
+            let mediaType = acceptedMedias[acceptedMedias.length - 1]?.split(".")[0];
+            if (!mediaType) {
+                throw new Error("Invalid media type.");
+            }
+    
+            // Fetch user data
+            const user = await userDbHandler.getById(user_id);
+            if (!user) {
+                throw new Error("User not found.");
+            }
+    
+            // Fetch token distribution settings
+            const { value, extra } = await settingDbHandler.getOneByQuery({ name: "tokenDistribution" });
+            if (!value || !extra) {
+                throw new Error("Token distribution settings not found.");
+            }
+    
+            // Calculate token distribution
+            let finVal = value;
+            if (user?.extra?.tokens >= 10) {
+                finVal = value / 2;
+            }
+    
+            // Adjust tokens based on multiple link verifications
+            const tokens = parseFloat(finVal) * acceptedMedias.length; // Multiply by the number of links
+            const levels = extra?.levels;
+    
+            // Update user data with income
+            await userDbHandler.updateOneByQuery(
+                { _id: user_id },
+                {
+                    $set: {
+                        ["extra.status"]: true,
+
+                    },
+                    $inc: {
+                        wallet: tokens,
+                        "extra.tokens": tokens,
+                        "extra.tasksIncome": tokens,
+                        "extra.totalIncome": tokens,
+                    },
+                }
+            );
+    
+            // Log income for the user
+            await incomeDbHandler.create({
+                user_id: user_id,
+                amount: tokens,
+                extra: { mediaType: mediaType.includes("youtube") ? "youtube" : mediaType },
+                type: 0,
+                wamt: tokens,
+                iamount: tokens,
+                date: Date.now(),
+            });
+    
+            // Generate level income
+            await levelIncome(user_id, levels, tokens);
+    
+            // Success response
+            return responseHelper.success(res, { msg: "Link Verified Successfully!" });
+        } catch (error) {
+            // Error response
+            return responseHelper.error(res, { msg: error.message || "An error occurred." });
+        }
+    },
+    
+    rejectSocial : async (req, res) => {
+        try {
+            const user_id = req.body.user_id; // Assuming `user_id` comes from the request body
+    
+            if (!user_id) {
+                throw new Error("User ID is required.");
+            }
+    
+            // List of media types to reject
+            const mediaTypes = ["x", "linkedin", "facebook", "instagram"];
+    
+            // Prepare update query to reset all specified media types
+            const updateFields = {};
+            mediaTypes.forEach((type) => {
+                updateFields[`extra.${type}`] = false;
+                updateFields[`extra.${type}Url`] = "";
+                updateFields[`extra.status`] = false;
+                console.log(`extra.${type}`)
+            });
+    
+            // Update user data
+            await userDbHandler.updateOneByQuery(
+                { _id: user_id },
+                { $set: updateFields },
+               
+            );
+    
+            // Success response
+            return responseHelper.success(res, { msg: "Links Rejected Successfully!" });
+        } catch (error) {
+            // Error response
+            return responseHelper.error(res, { msg: error.message || "An error occurred." });
+        }
+    },
+    
     add: async (req, res) => {
         let responseData = {};
         // let admin = req.admin;

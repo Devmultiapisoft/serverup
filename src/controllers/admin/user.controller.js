@@ -71,6 +71,7 @@ module.exports = {
     getAll: async (req, res) => {
         let reqObj = req.query;
         log.info('Recieved request for getAll Users:', reqObj);
+        console.log(reqObj)
         let responseData = {};
         try {
             let getList;
@@ -93,17 +94,19 @@ module.exports = {
     get_daily_task_data: async (req, res) => {
         let reqObj = req.query;
         log.info('Recieved request for getAll Users:', reqObj);
-        console.log("aya")
+        console.log("aya%%%%%%%%%%%%%%")
+        console.log(reqObj)
         let responseData = {};
         try {
 
             let getList;
             if (reqObj?.limit == -1) {
                 getList = await socialLinksDbHandler.getByQuery({'user_id':1}, { 'user_id': 1, 'url': 1});
-                console.log(getList)
+                console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^")
             }
             else {
                 getList = await socialLinksDbHandler.getAll(reqObj);
+                console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
                 console.log(getList)
 
             }

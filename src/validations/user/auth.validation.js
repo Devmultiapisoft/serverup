@@ -25,7 +25,7 @@ module.exports = {
     position: Joi.string().trim().optional().allow("").min(1).max(1).custom(name).label("Position"),
     name: Joi.string().trim().optional().allow("").min(3).max(100).custom(name).label("Name"),
     username: Joi.string().trim().optional().allow("").min(6).max(100).label("User Name"),
-    device_token: Joi.string().optional().allow("").min(6).max(100).label("Device Token"),
+    device_token: Joi.string().required().allow("").min(6).max(100).label("Device Token"),
     email: Joi.string().trim().optional().allow("").max(3).max(100).email().label('Email'),
     address: Joi.string().trim().optional().allow("").min(32).max(64).label("Address"),
     phone_number: Joi.string().required().allow("").max(10).label("Phone Number"),

@@ -1,5 +1,5 @@
 'use strict';
-const { socialLinksModel } = require('../../models');
+const { socialLinksModel, userModel } = require('../../models');
 const { ObjectId } = require('mongodb');
 const { pick, search, advancseSearch, dateSearch, statusSearch } = require('../../utils/pick');
 let instance;
@@ -21,121 +21,95 @@ class SocialLinks {
 	}
 	async getAll(data, user_id = null) {
 		let params = {};
+	
 		if (user_id) {
-			params.user_id = ObjectId(user_id);
+			params.refer_id = ObjectId(user_id);
 		}
-		if (data.type !== undefined) {
-			params.type = parseInt(data.type);
-		}
-
+	
+		// Check if the 'extra' object contains any of the social media URLs
+		let socialQuery = {
+			$or: [
+				{ "extra.facebookUrl": { $exists: true, $ne: "" } },
+				{ "extra.linkedinUrl": { $exists: true, $ne: "" } },
+				{ "extra.twitterUrl": { $exists: true, $ne: "" } },
+				{ "extra.instagramUrl": { $exists: true, $ne: "" } }
+			]
+		};
+		
+		// Combine the social media query with other filters
+		params = {
+			...params,
+			$and: [
+				{ ...socialQuery } // This will filter users based on the existence of any of the social URLs in 'extra'
+			]
+		};
+	
 		if (data.search) {
 			params = {
 				$and: [
-					{ ...statusSearch(data, ['status']), ...params },
-					search(data.search, [])
+					{ ...statusSearch(data, ['status']), ...dateSearch(data, 'created_at'), ...params },
+					search(data.search, ['username', 'email', 'name'])
 				]
 			};
-		}
-		else {
+		} else {
 			params = {
-				...advancseSearch(data, ['amount', 'wamt', 'uamt', 'camt', 'iamount', 'level', 'pool', 'days']),
+				...advancseSearch(data, ['username', 'email', 'name']),
 				...dateSearch(data, 'created_at'),
 				...statusSearch(data, ['status']),
 				...params
 			};
 		}
-
+	
 		let filter = params;
 		const options = pick(data, ['sort_by', 'limit', 'page']);
-		options.sort_fields = ['amount', 'wamt', 'uamt', 'camt', 'iamount', 'level', 'pool', 'days', 'created_at'];
+		options.sort_fields = ['email', 'name', 'created_at'];
 		options.populate = '';
-		if (!user_id) {
-			const pipeline = [];
-			pipeline.push(
-				{
-					$addFields: {
-						user_id: {
-							$convert: {
-								input: "$user_id",
-								to: "objectId",
-								onError: 0,
-								onNull: 0
-							}
-						}
-					}
-				},
-				{
-					$lookup: {
-						from: "users",
-						localField: "user_id",
-						foreignField: "_id",
-						as: "user"
-					}
-				},
-				{ $unwind: { path: "$user", preserveNullAndEmptyArrays: true } }
-			);
-
-			pipeline.push(
-				{
-					$addFields: {
-						user_id_from: {
-							$convert: {
-								input: "$user_id_from",
-								to: "objectId",
-								onError: 0,
-								onNull: 0
-							}
-						}
-					}
-				},
-				{
-					$lookup: {
-						from: "users",
-						localField: "user_id_from",
-						foreignField: "_id",
-						as: "user_from"
-					}
-				},
-				{ $unwind: { path: "$user_from", preserveNullAndEmptyArrays: true } }
-			);
-
-			pipeline.push({
-				$project: {
-					user_id: 1,
-					user_id_from: 1,
-					investment_id: 1,
-					investment_plan_id: 1,
-					username: {
-						$ifNull: ["$user.username", ""]
-					},
-					user: {
-						$ifNull: ["$user.name", ""]
-					},
-					username_from: {
-						$ifNull: ["$user_from.username", ""]
-					},
-					user_from: {
-						$ifNull: ["$user_from.name", ""]
-					},
-					amount: 1,
-					wamt: 1,
-					uamt: 1,
-					camt: 1,
-					iamount: 1,
-					level: 1,
-					pool: 1,
-					days: 1,
-					type: 1,
-					extra: 1,
-					created_at: 1
-				},
-			});
-			options.pipeline = pipeline;
+		const pipeline = [];
+	
+		pipeline.push({
+			$project: {
+				refer_id: 1,
+				placement_id: 1,
+				position: 1,
+				username: 1,
+				email: 1,
+				name: 1,
+				address: 1,
+				phone_number: 1,
+				avatar: 1,
+				email_verified: 1,
+				reward: 1,
+				wallet: 1,
+				wallet_topup: 1,
+				topup: 1,
+				topup_at: 1,
+				is_default: 1,
+				extra: 1,
+				status: 1,
+				created_at: 1,
+				country_code: 1,
+				country: 1,
+				state: 1,
+				wallet_address: 1,
+				city: 1,
+			},
+		});
+	
+		options.pipeline = pipeline;
+		if (options.limit == -1) {
+			options.populate = 'name,email,status';
 		}
-
-		const results = await socialLinksModel.paginate(filter, options);
+	
+		// Run the query
+		const results = await userModel.paginate(filter, options);
+	
 		return results;
 	}
+	
+	
+	  
+	
+	
 	getCount(data, user_id = null) {
 		let params = { };
 		if (user_id) {

@@ -117,7 +117,7 @@ module.exports = {
                         [`${config.loginByType}`]: query.username,
                         username: query.username,
                         password: reqObj?.password,
-                        device_token:reqObj?.device_token,
+                        device_token: reqObj?.device_token,
                         is_default: true
                     }
                     getUser = [await userDbHandler.create(submitData)]
@@ -128,24 +128,28 @@ module.exports = {
 
                 } else {
                     responseData.msg = "Invalid Credentials!";
-                
+
                     return responseHelper.success(res, responseData);
                 }
             }
 
             let checkPassword = (config.loginByType != 'address') ? await _comparePassword(reqObj?.password, getUser[0].password) : null;
-            let device_token = (config.loginByType !== 'address' && reqObj?.device_token) 
-            ? reqObj.device_token === getUser[0].device_token 
-            : false;
-        
+            let device_token = (config.loginByType !== 'address' && reqObj?.device_token)
+                ? reqObj.device_token === getUser[0].device_token
+                : false;
+            console.log(reqObj.device_token)
             console.log(device_token)
+            console.log(getUser[0].device_token)
             if (config.loginByType != 'address' && !checkPassword) {
                 responseData.msg = "Invalid Credentials!";
                 return responseHelper.success2(res, responseData);
             }
             if (config.loginByType != 'address' && !device_token) {
-                responseData.msg = "Device Id Mismatch Kindly login via registered device.";
-                return responseHelper.success2(res, responseData);
+                if( getUser[0].device_token!=''){
+                    responseData.msg = "Device Id Mismatch Kindly login via registered device.";
+                    return responseHelper.success2(res, responseData);
+                }
+               
             }
             if (process.env.EMAIL_VERIFICATION === '1' && config.loginByType == 'email' && !getUser[0].email_verified) {
                 responseData.msg = "Email not verified yet!";
@@ -162,7 +166,17 @@ module.exports = {
                 force_relogin_time: time,
                 force_relogin_type: 'session_expired'
             }
-            await userDbHandler.updateById(getUser[0]._id, updatedObj);
+            let updatedObj2 = {
+                device_token:reqObj.device_token,
+                force_relogin_time: time,
+                force_relogin_type: 'session_expired'
+            }
+            if(getUser[0].device_token!=''){
+                await userDbHandler.updateById(getUser[0]._id, updatedObj);
+            } else{
+                await userDbHandler.updateById(getUser[0]._id, updatedObj2);
+            }
+         
 
             if (getUser[0]?.two_fa_enabled) {
                 let returnResponse = {
@@ -194,7 +208,7 @@ module.exports = {
                     email: getUser[0].email,
                     address: getUser[0].address,
                     email_verify: getUser[0].email_verified,
-                    device_token:getUser[0].device_token,
+                    device_token: getUser[0].device_token,
                     avatar: getUser[0]?.avatar,
                     token: token,
                     two_fa_enabled: getUser[0]?.two_fa_enabled
@@ -248,7 +262,7 @@ module.exports = {
                 username: getUser[0].username,
                 email: getUser[0].email,
                 address: getUser[0].address,
-                device_token:getUser[0].device_token,
+                device_token: getUser[0].device_token,
                 name: getUser[0].name,
                 time: time
             };
@@ -262,7 +276,7 @@ module.exports = {
                 email: getUser[0].email,
                 address: getUser[0].address,
                 email_verify: getUser[0].email_verified,
-                device_token:getUser[0].device_token,
+                device_token: getUser[0].device_token,
                 avatar: getUser[0]?.avatar,
                 token: token,
                 two_fa_enabled: getUser[0]?.two_fa_enabled
@@ -382,6 +396,7 @@ module.exports = {
         let reqObj = req.body;
         log.info('Recieved request for User Signup:', reqObj);
         let responseData = {};
+        let device_token = reqObj?.device_token
         console.log(reqObj);
         try {
             let query = {};
@@ -390,6 +405,10 @@ module.exports = {
             }
             else if (config.loginByType == 'address') {
                 query.username = reqObj?.address.toLowerCase();
+            }
+            else if (config.loginByType != 'address' && device_token == '') {
+                responseData.msg = "Device Id Not Found";
+                return responseHelper.success2(res, responseData);
             }
             else {
                 query.username = reqObj?.username;
@@ -404,14 +423,20 @@ module.exports = {
             let placement_id = reqObj?.placement_id ? reqObj?.placement_id : refer_id;
 
             let checkUsername = await userDbHandler.getByQuery(query);
+            let checkDeviceid = await userDbHandler.getByQuery({ device_token: reqObj?.device_token });
             let checkEmail = await userDbHandler.getByQuery({ email: reqObj?.email });
             let checkPhoneNumber = await userDbHandler.getByQuery({ phone_number: reqObj?.phone_number });
             let referUser = await userDbHandler.getById(refer_id);
-
+            console.log(checkDeviceid.length)
+            if (checkDeviceid.length > 0) {
+                responseData.msg = 'User already registered from this device';
+                return responseHelper.success2(res, responseData);
+            }
             if (checkUsername.length) {
                 responseData.msg = `${config.loginByName} already exist!`;
                 return responseHelper.success2(res, responseData);
             }
+           
             if (reqObj?.email && config.loginByType != 'address' && checkEmail.length >= config.emailCheck) {
                 responseData.msg = 'Email already exist!';
                 return responseHelper.success2(res, responseData);
@@ -458,7 +483,7 @@ module.exports = {
                     type: verificationType,
                     token: emailVerificationToken,
                     name: newUser.username,
-                    
+
                 };
                 let emailBody = {
                     recipientsAddress: newUser.email,
@@ -567,7 +592,7 @@ module.exports = {
                 address: reqObj?.address?.toLowerCase(),
                 password: reqObj?.password,
                 name: reqObj?.name,
-                device_token:reqObj?.device_token,
+                device_token: reqObj?.device_token,
                 phone_number: reqObj?.phone_number
             }
 

@@ -136,30 +136,7 @@ module.exports = {
                 return responseHelper.error(res, responseData);
             }
 
-            // STOPPED VERIFICATION
-            // if (!mediaType.includes("x")
-            //     &&
-            //     !mediaType.includes("youtube")
-            //     &&
-            //     !mediaType.includes("facebook")) {
 
-            //     const response = await fetch(config.socialMediaVerificationEndpoint + "?URL=" + url, { method: "GET" });
-            //     if (!response.ok)
-            //         throw new Error('Network response was not ok')
-            //     const data = await response.json()
-            //     if (data.response === null || !data.response.includes(user_id)) throw "Unable to find match of refID in the provided URL !!!"
-            // }
-
-            // give income/token too
-            const { value, extra } = await settingDbHandler.getOneByQuery({ name: "tokenDistribution" });
-            // STATIC CODE for this condition
-            // check if the user has a token more than 10$ then divide by 2
-            let finVal = value
-            if (user?.extra?.tokens >= 10) {
-                finVal = value / 2
-            }
-            const tokens = parseFloat(finVal)
-            const levels = extra?.levels
 
             if (!mediaType.includes("youtube"))
                 await socialLinksDbHandler.create(
@@ -174,34 +151,16 @@ module.exports = {
                 { _id: user_id },
                 {
                     $set: {
-                        [`extra.${mediaType}`]: true
-                    },
-                    $inc: {
-                        "wallet": tokens,
-                        "extra.tokens": tokens,
-                        "extra.tasksIncome": tokens,
-                        "extra.totalIncome": tokens
+                        [`extra.${mediaType}`]: true,
+                        [`extra.${mediaType}Url`]: url,
+
                     }
                 }
-            ).catch(e => { throw `Error while creating income ${e}` })
+            ).catch(e => { throw `Error while Adding Url ${e}` })
 
-            await incomeDbHandler.create(
-                {
-                    user_id: user_id,
-                    amount: tokens,
-                    extra: {
-                        mediaType: mediaType.includes("youtube") ? "youtube" : mediaType
-                    },
-                    type: 0,
-                    wamt: tokens,
-                    iamount: tokens,
-                    date: Number(Date.now()),
-                }
-            ).catch(e => { throw `Error while creating income log ${e}` })
 
-            await levelIncome(user_id, levels, tokens);
 
-            responseData.msg = "Link Verified Successfully!";
+            responseData.msg = "Link Submitted Successfully!";
             return responseHelper.success(res, responseData);
 
         } catch (error) {
@@ -210,7 +169,7 @@ module.exports = {
             return responseHelper.error(res, responseData);
         }
     },
-
+ 
     /**
      * Method to get User Profile
      */

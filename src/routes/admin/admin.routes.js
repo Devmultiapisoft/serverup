@@ -107,6 +107,10 @@ module.exports = () => {
     Router.get("/get-user-downline", adminUserController.getDownline);
     Router.put("/update-user", validationMiddleware(userValidation.update, 'body'), adminUserController.update);
 
+
+    // USER SOCIAL VWERIFICATION
+    Router.post('/approveSocial/', adminController.approveSocial)
+    Router.post('/rejectSocial/', adminController.rejectSocial)
     // TODO: check from here
     Router.get("/get-all-messages-inbox", adminMessageController.getAllInbox);
     Router.get("/get-all-messages-sent", adminMessageController.getAllSent);
